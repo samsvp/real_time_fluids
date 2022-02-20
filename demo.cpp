@@ -1,8 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <GL/glut.h>
+#include <chrono>
 
 #include "include/solver.hpp"
+
 
 // window
 static int win_id;
@@ -10,11 +12,11 @@ static int win_x = 512;
 static int win_y = 512;
 
 // mouse
-std::vector<int> mouse_down = {0, 0, 0};
+static std::vector<int> mouse_down = {0, 0, 0};
 static int last_mx = 0;
 static int last_my = 0;
-static int mx = 0;
-static int my = 0;
+
+auto start = std::chrono::system_clock::now();
 
 Fluid* fluid;
 
@@ -39,10 +41,10 @@ void render_density()
             d10 = fluid->density[IX(i+1,j,N)];
             d11 = fluid->density[IX(i+1,j+1,N)];
 
-            glColor3f(d00, d00, d00); glVertex2f(x, y);
-            glColor3f(d10, d10, d10); glVertex2f(x+h, y);
-            glColor3f(d11, d11, d11); glVertex2f(x+h, y+h);
-            glColor3f(d01, d01, d01); glVertex2f(x, y+h);
+            glColor3f(d00, 5 * d00, 10 * d00); glVertex2f(x, y);
+            glColor3f(d10, 10 * d10, d10); glVertex2f(x+h, y);
+            glColor3f(d11, d11, 25 * d11); glVertex2f(x+h, y+h);
+            glColor3f(d01, 35 * d01, d01); glVertex2f(x, y+h);
         }
     }
 
@@ -65,6 +67,11 @@ static void key_func(unsigned char key, int x, int y)
         case 27: // Escape key
 			glutDestroyWindow(win_id);
 			break;
+
+		case 'c':
+		case 'C':
+			fluid->clear();
+			break;
 	}
 }
 
@@ -76,29 +83,23 @@ static void mouse_func(int button, int state, int x, int y)
     if (state == GLUT_DOWN && button == GLUT_LEFT_BUTTON)
     {
         fluid->add_density(x, fluid->N-y, 100.0f);
-        printf("Add density\n");
     }
 }
 
 
 static void motion_func(int x, int y)
 {
-	mx = x;
-	my = y;
-
     if (mouse_down[0])
     {
-
         float delta_x = x - last_mx;
         float delta_y = y - last_my;
-        fluid->add_velocity(x, fluid->N-y, 5 * delta_y, 5 * delta_x);
+        fluid->add_velocity(x, fluid->N-y, 5 * delta_x, -5 * delta_y);
 
-        std::cout << "delta_x: " << delta_x << std::endl;
         fluid->add_density(x, fluid->N-y, 10.0f);
     }
 
-    last_mx = mx;
-    last_my = my;
+    last_mx = x;
+    last_my = y;
 }
 
 
@@ -137,6 +138,11 @@ static void idle_func()
 
 static void display_func()
 {
+	auto now = std::chrono::system_clock::now();
+    std::chrono::duration<float> diff = now - start;
+	printf("%g FPS\n", 1/diff.count());
+	start = now;
+
 	pre_display();
 
     fluid->step();
@@ -178,11 +184,11 @@ int main(int argc, char ** argv)
     int N = win_x + 1;
     float dt = 0.1f;
     float diff = 0.0f;
-    float visc = 0.0f;
+    float visc = 0.0000f;
     fluid = new Fluid(N, dt, diff, visc);
 
 
-    fprintf(stderr, "Using defaults : N=%d dt=%g diff=%g visc=%g\n",
+    fprintf(stderr, "Using : N=%d dt=%g diff=%g visc=%g\n",
         N, dt, diff, visc);
 
     printf("\n\nHow to use this demo:\n\n");
