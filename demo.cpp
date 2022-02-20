@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <GL/glut.h>
 
-#include "solver.hpp"
+#include "include/solver.hpp"
 
 // window
 static int win_id;
