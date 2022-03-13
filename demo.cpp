@@ -184,7 +184,7 @@ int main(int argc, char ** argv)
     int N = win_x + 1;
     float dt = 0.1f;
     float diff = 0.0f;
-    float visc = 0.0000f;
+    float visc = 0.00001f;
     fluid = new Fluid(N, dt, diff, visc);
 
 

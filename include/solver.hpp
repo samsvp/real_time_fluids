@@ -1,8 +1,23 @@
 #include <math.h> 
 #include <vector>
 #include <iostream>
+#include <execution>
 #include <algorithm>
 #include <functional>
+
+
+std::vector<int> indexes;
+
+
+void start_indexes(int size)
+{
+    indexes.resize(size);
+    for (int i = 0; i < size; i++)
+    {
+        indexes[i] = i;
+    }
+    
+}
 
 
 int IX(int x, int y, int N)
@@ -14,13 +29,12 @@ int IX(int x, int y, int N)
 
 void for_all(int N, std::function<void(int, int)> f)
 {
-    for (int j=1; j<N - 1; j++)
-    {
-        for (int i=1; i<N - 1; i++)
-        {
-            f(i, j);
-        }
-    }
+    std::for_each(std::execution::par, indexes.begin(), indexes.end(),
+         [&N, &f](int i){
+            int y = i / N;
+            int x = i % N;
+            f(x, y);
+    });
 }
 
 
@@ -43,6 +57,8 @@ public:
     Fluid(int N, float dt, float diff, float visc) : 
         N(N), size(N*N), dt(dt), diff(diff), visc(visc)
     {
+        start_indexes(this->size);
+
         // init vectors
         this->s.resize(this->size);
         this->density.resize(this->size);
@@ -86,6 +102,12 @@ public:
     {
         int i = IX(x, y, this->N);
         this->density[i] += density;
+
+        if (std::isnan(this->density[i]))
+            this->density[i] = 10;
+        if (std::isnan(this->s[i]))
+            this->s[i] = 10;
+
     }
 
 
@@ -95,6 +117,25 @@ public:
 
         this->vx[i] += vx;
         this->vy[i] += vy;
+
+
+        if (std::isnan(this->vx[i]))
+        {
+            this->vx[i] = 10;
+            this->vx0[i] = 10;
+        }
+            
+        if (std::isnan(this->vy[i]))
+        {
+            this->vy[i] = 10;
+            this->vy0[i] = 10;
+        }
+
+        if (abs(this->vx[i]) > 10)
+            this->vx[i] = this->vx[i] > 0 ? 10 : -10;
+        if (abs(this->vy[i]) > 10)
+            this->vy[i] = this->vy[i] > 0 ? 10 : -10;
+
     }
 
 
@@ -102,6 +143,9 @@ public:
     {
         std::fill(this->vx.begin(), this->vx.end(), 0);
         std::fill(this->vy.begin(), this->vy.end(), 0);
+        std::fill(this->vx0.begin(), this->vx0.end(), 0);
+        std::fill(this->vy0.begin(), this->vy0.end(), 0);
+        std::fill(this->s.begin(), this->s.end(), 0);
         std::fill(this->density.begin(), this->density.end(), 0);
     }
 
@@ -119,10 +163,13 @@ private:
         for (int k=0; k<iter; k++)
         {
             for_all(N, [&a, &N, &x, &x0, &c_inv](int i, int j) {
-                x[IX(i, j, N)] = (x0[IX(i, j, N)] + a * (
+                float nx = (x0[IX(i, j, N)] + a * (
                         x[IX(i+1, j, N)] + x[IX(i-1, j, N)] +
                         x[IX(i, j+1, N)] + x[IX(i, j-1, N)]
                     )) * c_inv;
+
+                if (abs(nx) < 1000)
+                    x[IX(i, j, N)] = nx;
             });
             
             set_boundary(b, x, N);
