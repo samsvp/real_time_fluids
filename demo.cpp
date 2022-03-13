@@ -139,13 +139,14 @@ static void idle_func()
 static void display_func()
 {
 	auto now = std::chrono::system_clock::now();
-    std::chrono::duration<float> diff = now - start;
-	printf("%g FPS\n", 1/diff.count());
+    std::chrono::duration<double> diff = now - start;
+	double dt = diff.count();
+	printf("%g FPS\n", 1/dt);
 	start = now;
 
 	pre_display();
 
-    fluid->step();
+    fluid->step(dt);
     render_density();
 
 	post_display();
@@ -182,9 +183,9 @@ int main(int argc, char ** argv)
     glutInit(&argc, argv);
 
     int N = win_x + 1;
-    float dt = 0.1f;
+    float dt = 1.0/60.;
     float diff = 0.0f;
-    float visc = 0.00001f;
+    float visc = 0.00005f;
     fluid = new Fluid(N, dt, diff, visc);
 
 

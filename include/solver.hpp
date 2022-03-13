@@ -44,17 +44,17 @@ public:
     const int N;
     const int size;
     
-    std::vector<float> s;
-    std::vector<float> density;
+    std::vector<double> s;
+    std::vector<double> density;
 
-    std::vector<float> vx = {0};
-    std::vector<float> vy = {0};
+    std::vector<double> vx = {0};
+    std::vector<double> vy = {0};
 
-    std::vector<float> vx0 = {0};
-    std::vector<float> vy0 = {0};
+    std::vector<double> vx0 = {0};
+    std::vector<double> vy0 = {0};
 
 
-    Fluid(int N, float dt, float diff, float visc) : 
+    Fluid(int N, double dt, double diff, double visc) : 
         N(N), size(N*N), dt(dt), diff(diff), visc(visc)
     {
         start_indexes(this->size);
@@ -74,31 +74,30 @@ public:
 
     }
 
-    void step()
+    void step(double dt)
     {
         int N = this->N;
-        float visc = this->visc;
-        float diff = this->diff;
-        float dt = this->dt;
+        double visc = this->visc;
+        double diff = this->diff;
 
-        diffuse(1, vx0, vx, visc, dt, 4, N);
-        diffuse(2, vy0, vy, visc, dt, 4, N);
+        this->diffuse(1, this->vx0, this->vx, visc, dt, 4, N);
+        this->diffuse(2, this->vy0, this->vy, visc, dt, 4, N);
         
-        project(vx0, vy0, vx, vy, 4, N);
+        this->project(this->vx0, this->vy0, this->vx, this->vy, 4, N);
         
-        advect(1, vx, vx0, vx0, vy0, dt, N);
-        advect(2, vy, vy0, vx0, vy0, dt, N);
+        this->advect(1, this->vx, this->vx0, this->vx0, this->vy0, dt, N);
+        this->advect(2, this->vy, this->vy0, this->vx0, this->vy0, dt, N);
         
-        project(vx, vy, vx0, vy0, 4, N);
+        this->project(this->vx, this->vy, this->vx0, this->vy0, 4, N);
         
-        diffuse(0, s, density, diff, dt, 4, N);
-        advect(0, density, s, vx, vy, dt, N);
+        this->diffuse(0, this->s, this->density, diff, dt, 4, N);
+        this->advect(0, this->density, this->s, this->vx, this->vy, dt, N);
 
-        fade_density();
+        this->fade_density();
     }
 
 
-    void add_density(int x, int y, float density)
+    void add_density(int x, int y, double density)
     {
         int i = IX(x, y, this->N);
         this->density[i] += density;
@@ -111,7 +110,7 @@ public:
     }
 
 
-    void add_velocity(int x, int y, float vx, float vy)
+    void add_velocity(int x, int y, double vx, double vy)
     {
         int i = IX(x, y, this->N);
 
@@ -150,20 +149,20 @@ public:
     }
 
 private:
-    float dt;
-    float diff;
-    float visc;
+    double dt;
+    double diff;
+    double visc;
 
 
-    void lin_solve(int b, std::vector<float>& x, std::vector<float>& x0,
-        float a, float c, int iter, int N)
+    void lin_solve(int b, std::vector<double>& x, std::vector<double>& x0,
+        double a, double c, int iter, int N)
     {
-        float c_inv = 1.0 / c;
+        double c_inv = 1.0 / c;
         
         for (int k=0; k<iter; k++)
         {
             for_all(N, [&a, &N, &x, &x0, &c_inv](int i, int j) {
-                float nx = (x0[IX(i, j, N)] + a * (
+                double nx = (x0[IX(i, j, N)] + a * (
                         x[IX(i+1, j, N)] + x[IX(i-1, j, N)] +
                         x[IX(i, j+1, N)] + x[IX(i, j-1, N)]
                     )) * c_inv;
@@ -177,16 +176,16 @@ private:
     }
 
 
-    void diffuse(int b, std::vector<float>& x, std::vector<float>& x0,
-        float diff, float dt, int iter, int N)
+    void diffuse(int b, std::vector<double>& x, std::vector<double>& x0,
+        double diff, double dt, int iter, int N)
     {
-        float a = dt * diff * (N - 2) * (N - 2);
+        double a = dt * diff * (N - 2) * (N - 2);
         lin_solve(b, x, x0, a, 1 + 4 * a, iter, N);
     }
 
 
-    void project(std::vector<float>& vx, std::vector<float>& vy, 
-        std::vector<float>& p, std::vector<float>& div, int iter, int N)
+    void project(std::vector<double>& vx, std::vector<double>& vy, 
+        std::vector<double>& p, std::vector<double>& div, int iter, int N)
     {
         for_all(N, [&vx, &vy, &div, &N](int i, int j) {
             div[IX(i, j, N)] = -0.5f*(
@@ -213,26 +212,26 @@ private:
     }
 
 
-    void advect(int b, std::vector<float>& d, std::vector<float>& d0, 
-        std::vector<float>& velocX, std::vector<float>& velocY, 
-        float dt, int N)
+    void advect(int b, std::vector<double>& d, std::vector<double>& d0, 
+        std::vector<double>& velocX, std::vector<double>& velocY, 
+        double dt, int N)
     {
         for_all(N, [&](int i, int j) 
         {
-            float x = i - dt * (N - 2) * velocX[IX(i, j, N)];
-            float y = j - dt * (N - 2) * velocY[IX(i, j, N)];
+            double x = i - dt * (N - 2) * velocX[IX(i, j, N)];
+            double y = j - dt * (N - 2) * velocY[IX(i, j, N)];
             
-            auto saturate = [](float v, float l, float h) {
+            auto saturate = [](double v, double l, double h) {
                 return std::min(h, std::max(l, v));
             };
             
             int xs = std::floor(saturate(x, 0.5f, N + 0.5f));
             int ys = std::floor(saturate(y, 0.5f, N + 0.5f));
             
-            float s1 = x - xs; 
-            float s0 = 1.0f - s1; 
-            float t1 = y - ys; 
-            float t0 = 1.0f - t1;
+            double s1 = x - xs; 
+            double s0 = 1.0f - s1; 
+            double t1 = y - ys; 
+            double t0 = 1.0f - t1;
 
             d[IX(i, j, N)] = 
                 s0 * (t0 * d0[IX(xs, ys, N)] + t1 * d0[IX(xs, ys+1, N)]) +
@@ -243,7 +242,7 @@ private:
     }
 
 
-    void set_boundary(int b, std::vector<float>& x, int N)
+    void set_boundary(int b, std::vector<double>& x, int N)
     {
         for(int i = 1; i < N - 1; i++) 
         {
